@@ -143,6 +143,10 @@ const DEFAULT_MAX_CHARS = 20_000;
 const MAX_LISTED_PDFS = 500;
 const PDF_RESOURCE_PREFIX = "docs-decomposer://pdf/";
 
+const documentPathSchema = z.string().min(1).describe(
+  "PDF path. Absolute, or relative to an allowed document root.",
+);
+
 interface PromptDefinition {
   name: string;
   description: string;
@@ -609,7 +613,11 @@ export async function createMcpServer(
     "list_directory",
     {
       description: "List PDF files and subdirectories inside an allowed document root.",
-      inputSchema: { path: z.string().optional() },
+      inputSchema: {
+        path: z.string().optional().describe(
+          "Directory path. Absolute, or relative to an allowed document root. Omit to list the allowed roots.",
+        ),
+      },
     },
     async ({ path }) => {
       try {
@@ -643,9 +651,9 @@ export async function createMcpServer(
   server.registerTool(
     "analyze_document",
     {
-      description: "Analyze a PDF and return a depth-limited table-of-contents tree without section bodies. Use parentSectionNumber to scope to a branch, maxDepth for depth, and maxSections/offset to page through long outlines.",
+      description: "Analyze a PDF and return a depth-limited table-of-contents tree without section bodies. The path may be absolute or relative to an allowed document root. Use parentSectionNumber to scope to a branch, maxDepth for depth, and maxSections/offset to page through long outlines.",
       inputSchema: {
-        path: z.string().min(1),
+        path: documentPathSchema,
         parentSectionNumber: z.string().min(1).optional(),
         maxDepth: z.number().int().min(1).max(6).default(DEFAULT_MAX_DEPTH),
         maxSections: z.number().int().min(1).max(1000).default(DEFAULT_MAX_SECTIONS),
@@ -721,7 +729,7 @@ export async function createMcpServer(
     {
       description: "Read one PDF section by its contents number. Long sections are capped by maxChars; use offset to page through the rest.",
       inputSchema: {
-        path: z.string().min(1),
+        path: documentPathSchema,
         sectionNumber: z.string().min(1),
         maxChars: z.number().int().min(1).max(200_000).default(DEFAULT_MAX_CHARS),
         offset: z.number().int().min(0).default(0),
@@ -771,7 +779,7 @@ export async function createMcpServer(
     {
       description: "Search section titles and numbers without returning section bodies. Use this to locate sections before calling get_section.",
       inputSchema: {
-        path: z.string().min(1),
+        path: documentPathSchema,
         query: z.string().min(1),
         maxResults: z.number().int().min(1).max(100).default(20),
       },

@@ -83,6 +83,8 @@ MCP Inspector 中用同样的命令连接，选择 stdio 传输即可。
 | `get_section` | 读取单节正文 | `path`、`sectionNumber`、`maxChars=20000`、`offset=0` |
 | `export_markdown` | 导出整本 Markdown（体积很大） | `path` |
 
+所有 `path` 参数都支持**绝对路径**或**相对于允许根的相对路径**；有多个根时按顺序尝试。相对路径不是相对于客户端 cwd。
+
 ### 推荐流程
 
 1. `list_roots` / `list_directory` 找到目标 PDF。
