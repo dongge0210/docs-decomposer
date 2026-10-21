@@ -41,3 +41,8 @@ See [USAGE.md](USAGE.md) for tool flows, pagination, resources, prompts, root sa
 | `npm run mcp` | Start the stdio MCP server |
 | `npm test` | Run the test suite |
 | `npm run build` | Type-check the project |
+
+## License
+
+MIT
+
