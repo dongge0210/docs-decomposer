@@ -19,6 +19,27 @@ DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 
 ## MCP 客户端配置
 
+下面是本项目 `.mcp.json` 实际使用的形式：
+
+```json
+{
+  "mcpServers": {
+    "docs-decomposer": {
+      "command": "sh",
+      "args": ["-c", "exec npm --prefix \"$DOCS_DECOMPOSER_HOME\" run mcp"],
+      "env": {
+        "DOCS_DECOMPOSER_HOME": "/path/to/docs_Decomposer",
+        "DOCS_DECOMPOSER_ROOTS": "/path/to/documents"
+      }
+    }
+  }
+}
+```
+
+`DOCS_DECOMPOSER_HOME` 由 `sh` 展开以定位项目目录；`DOCS_DECOMPOSER_ROOTS` 是服务器允许读取的文档目录。
+
+不使用 shell 包装的简化形式：
+
 ```json
 {
   "mcpServers": {

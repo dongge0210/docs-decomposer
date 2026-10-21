@@ -56,7 +56,24 @@ DEBUG=1 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 
 ## 客户端配置
 
-Claude Desktop / Claude Code 的 MCP 配置示例：
+Claude Desktop / Claude Code 的 MCP 配置示例，与本项目 `.mcp.json` 一致：
+
+```json
+{
+  "mcpServers": {
+    "docs-decomposer": {
+      "command": "sh",
+      "args": ["-c", "exec npm --prefix \"$DOCS_DECOMPOSER_HOME\" run mcp"],
+      "env": {
+        "DOCS_DECOMPOSER_HOME": "/path/to/docs_Decomposer",
+        "DOCS_DECOMPOSER_ROOTS": "/path/to/documents"
+      }
+    }
+  }
+}
+```
+
+不使用 shell 包装的简化形式：
 
 ```json
 {

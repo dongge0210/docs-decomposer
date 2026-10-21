@@ -19,6 +19,27 @@ DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 
 ## MCP client configuration
 
+This is the form used by the project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "docs-decomposer": {
+      "command": "sh",
+      "args": ["-c", "exec npm --prefix \"$DOCS_DECOMPOSER_HOME\" run mcp"],
+      "env": {
+        "DOCS_DECOMPOSER_HOME": "/path/to/docs_Decomposer",
+        "DOCS_DECOMPOSER_ROOTS": "/path/to/documents"
+      }
+    }
+  }
+}
+```
+
+`DOCS_DECOMPOSER_HOME` is expanded by `sh` to locate the project; `DOCS_DECOMPOSER_ROOTS` is the document directory the server is allowed to read.
+
+A simpler form without the shell wrapper:
+
 ```json
 {
   "mcpServers": {

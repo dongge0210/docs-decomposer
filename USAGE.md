@@ -56,7 +56,24 @@ The server is read-only, but a misconfigured root could let an agent read PDFs i
 
 ## Client configuration
 
-Claude Desktop / Claude Code example:
+Claude Desktop / Claude Code example, matching the project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "docs-decomposer": {
+      "command": "sh",
+      "args": ["-c", "exec npm --prefix \"$DOCS_DECOMPOSER_HOME\" run mcp"],
+      "env": {
+        "DOCS_DECOMPOSER_HOME": "/path/to/docs_Decomposer",
+        "DOCS_DECOMPOSER_ROOTS": "/path/to/documents"
+      }
+    }
+  }
+}
+```
+
+Without the shell wrapper:
 
 ```json
 {
