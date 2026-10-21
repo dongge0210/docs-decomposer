@@ -326,6 +326,26 @@ function resolveContents(
   return roots;
 }
 
+function mergeUnlistedSections(
+  sections: ResolvedOutlineItem[],
+  outline: ResolvedOutlineItem[],
+): ResolvedOutlineItem[] {
+  const listedTitles = new Set(
+    sections.map((item) => normalizeHeading(item.source.title)),
+  );
+  const lastListedPosition = sections.at(-1)?.position ?? 0;
+  const unlisted = outline.filter((item) =>
+    item.level === 1
+    && !item.number
+    && item.position > lastListedPosition
+    && !listedTitles.has(normalizeHeading(item.source.title)),
+  );
+  if (unlisted.length === 0) {
+    return sections;
+  }
+  return [...sections, ...unlisted].sort((left, right) => left.position - right.position);
+}
+
 function buildSectionsFromOutline(
   outline: ResolvedOutlineItem[],
   pageLines: string[][],
@@ -380,15 +400,19 @@ export async function processPdf(filePath: string): Promise<ParsedDocument> {
     if (contents.length > 0) {
       const sections = resolveContents(contents, outline, pageLines);
       if (sections.length > 0) {
-        return buildSectionsFromOutline(sections, pageLines);
+        const mergedSections = mergeUnlistedSections(sections, outline);
+        return { ...buildSectionsFromOutline(mergedSections, pageLines), pageCount: pdf.numPages };
       }
     }
     if (outline.length > 0) {
-      return buildSectionsFromOutline(outline, pageLines);
+      return { ...buildSectionsFromOutline(outline, pageLines), pageCount: pdf.numPages };
     }
-    return parseLines(pageLines.flatMap((lines, index) =>
-      lines.map((text) => ({ text, page: index + 1 })),
-    ));
+    return {
+      ...parseLines(pageLines.flatMap((lines, index) =>
+        lines.map((text) => ({ text, page: index + 1 })),
+      )),
+      pageCount: pdf.numPages,
+    };
   } finally {
     await loadingTask.destroy();
   }

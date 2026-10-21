@@ -5,11 +5,14 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit",
+    "mcp": "tsx src/mcp-server.ts",
     "test": "tsx --test tests/*.test.ts",
     "process": "tsx src/cli.ts"
   },
   "dependencies": {
-    "pdfjs-dist": "^6.2.108"
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "pdfjs-dist": "^6.2.108",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.10.0",

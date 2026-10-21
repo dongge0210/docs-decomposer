@@ -11,6 +11,7 @@ export interface Section {
 export interface ParsedDocument {
   preamble: string;
   sections: Section[];
+  pageCount?: number;
 }
 
 interface SourceLine {
