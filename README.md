@@ -1,5 +1,7 @@
 # Docs Decomposer
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 TypeScript PDF document processor with a token-efficient MCP server.
 
 - Extracts PDF text with PDF.js and builds a nested section tree from the table of contents and bookmarks.

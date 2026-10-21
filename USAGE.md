@@ -1,22 +1,24 @@
-# 使用指南
+# Usage
 
-Docs Decomposer 是一个 stdio MCP 服务器，把 PDF 拆成章节树，供 AI 客户端按需、分页地读取，避免一次性把整本 PDF 塞进上下文。
+[English](USAGE.md) | [简体中文](USAGE.zh-CN.md)
 
-## 启动
+Docs Decomposer is a stdio MCP server that decomposes a PDF into a section tree so AI clients can read it on demand, page by page, instead of loading the whole document into context.
+
+## Starting the server
 
 ```sh
-# 允许访问 ./docs 目录
+# Allow access to ./docs
 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 
-# 调试模式：返回每个层级的节数统计
+# Debug mode: include per-depth section counts
 DEBUG=1 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 ```
 
-`DOCS_DECOMPOSER_ROOTS` 用 `:` 分隔多个目录。未设置时只允许访问服务器启动目录。
+`DOCS_DECOMPOSER_ROOTS` separates multiple directories with `:`. When unset, only the server's startup directory is allowed.
 
-## 记住文档目录(无需环境变量)
+## Remembering a document directory (no environment variables)
 
-如果客户端无法可靠传递 environment，可以让 AI 直接调用 `register_root`：
+If a client cannot reliably pass environment variables, let the AI call `register_root`:
 
 ```json
 {
@@ -24,39 +26,37 @@ DEBUG=1 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 }
 ```
 
-- 项目路径在服务器启动时确定：`DOCS_DECOMPOSER_PROJECT`，未设置时用服务器工作目录。**客户端不能通过参数改变作用域**
-- `path` 可以是相对项目目录的路径，也可以是绝对路径
-- 文档目录必须在项目目录内；越界和文件系统根会被拒绝
-- 服务器把「项目 → 文档目录」映射写入 `~/.config/docs-decomposer/roots.json`，可用 `DOCS_DECOMPOSER_CONFIG` 覆盖位置
-- 加载记录时会重新校验路径仍在项目目录内
-- 当前会话立即生效；下次启动时按项目路径自动加载
+- The project path is fixed at server startup: `DOCS_DECOMPOSER_PROJECT`, or the server working directory when unset. **The client cannot change the scope through arguments.**
+- `path` may be relative to the project directory or absolute.
+- The document directory must be inside the project directory; escapes and the filesystem root are rejected.
+- The server stores the project-to-document mapping in `~/.config/docs-decomposer/roots.json` (override with `DOCS_DECOMPOSER_CONFIG`).
+- Stored roots are re-checked against the project directory when loaded.
+- The change applies immediately and is loaded automatically on later startups by project path.
 
-项目路径由 `DOCS_DECOMPOSER_PROJECT` 指定，未设置时使用服务器工作目录。
+Startup root precedence:
 
-启动时的根解析顺序：
+1. `DOCS_DECOMPOSER_ROOTS`
+2. The registered mapping for the project (`source: "registered"`)
+3. The server working directory (`source: "current-directory"`, with a warning)
 
-1. `DOCS_DECOMPOSER_ROOTS` 环境变量
-2. 该项目已登记的记录（`source: "registered"`）
-3. 服务器当前工作目录（`source: "current-directory"`，并打印警告）
+`list_roots` returns the current roots, `source`, `projectPath`, and `configPath` so callers can confirm which directory is in use.
 
-`list_roots` 返回当前根、`source`、`projectPath` 和 `configPath`，可以直接确认「现在用的目录对不对」。
+All core capabilities are tools. Even when a client does not support prompts or resources, `register_root`, paged analysis, search, and section reads still work; prompts and resources are optional enhancements.
 
-所有核心能力都在 tools 中。即使客户端不支持 prompts 或 resources，`register_root`、分页分析、搜索和分节读取仍然可用；prompts/resources 只是增强。
+## Directory safety
 
-## 目录安全
+The server is read-only, but a misconfigured root could let an agent read PDFs it should not. Protections:
 
-服务器只读，但根目录配错会让 AI 读到不该读的 PDF，所以做了这些保护：
+- **Configure roots explicitly**: point `DOCS_DECOMPOSER_ROOTS` at a document directory, never at a project root, home directory, or `/`.
+- **Startup log**: the server prints allowed roots to stderr; when the environment variable is unset it also warns that it is using the startup directory.
+- **Visible root source**: `list_roots` returns canonical paths and `source` (`environment`, `registered`, `current-directory`, or `explicit`).
+- **Responses include `root`**: `analyze_document`, `get_section`, `search_sections`, and `export_markdown` report which allowed root the file came from.
+- **Dangerous roots rejected**: the filesystem root (`/` or `C:\`) cannot be an allowed root.
+- **Read-only PDFs**: only `.pdf` files; traversal, symlink escapes, and out-of-root paths are rejected.
 
-- **显式配置根目录**：始终把 `DOCS_DECOMPOSER_ROOTS` 指向具体文档目录，不要指向项目根、家目录或 `/`。
-- **启动日志**：服务器启动时会在 stderr 打印所有允许的根；未设置环境变量时会额外警告正在使用启动目录。
-- **根来源可见**：`list_roots` 返回 canonical 路径和 `source`（`environment`、`current-directory` 或 `explicit`），可以确认当前根是不是预期配置。
-- **响应带 root**：`analyze_document`、`get_section`、`search_sections`、`export_markdown` 的返回都包含 `root`，能看出文件来自哪个允许根。
-- **拒绝危险根**：文件系统根（`/` 或 `C:\`）不能作为允许根。
-- **只读 PDF**：只接受 `.pdf` 文件；目录穿越、符号链接逃逸和越界路径都会被拒绝。
+## Client configuration
 
-## 客户端配置
-
-Claude Desktop / Claude Code 的 MCP 配置示例：
+Claude Desktop / Claude Code example:
 
 ```json
 {
@@ -72,68 +72,68 @@ Claude Desktop / Claude Code 的 MCP 配置示例：
 }
 ```
 
-MCP Inspector 中用同样的命令连接，选择 stdio 传输即可。
+Use the same command in MCP Inspector and choose the stdio transport.
 
-## 工具
+## Tools
 
-| 工具 | 用途 | 主要参数 |
+| Tool | Purpose | Main parameters |
 |---|---|---|
-| `list_roots` | 查看允许访问的根目录、来源和项目路径 | 无 |
-| `register_root` | 记住某个项目的文档目录，下次自动加载 | `path`、`projectPath` |
-| `list_directory` | 列出目录下的 PDF 和子目录 | `path`（省略时列出根目录） |
-| `analyze_document` | 读取章节树，不返回正文 | `path`、`parentSectionNumber`、`maxDepth=3`、`maxSections=100`、`offset=0` |
-| `search_sections` | 按标题/编号搜索，不返回正文 | `path`、`query`、`maxResults=20` |
-| `get_section` | 读取单节正文 | `path`、`sectionNumber`、`maxChars=20000`、`offset=0` |
-| `export_markdown` | 导出整本 Markdown（体积很大） | `path` |
+| `list_roots` | Show allowed roots, their source, and the project path | none |
+| `register_root` | Remember a project's document directory for later sessions | `path` |
+| `list_directory` | List PDFs and subdirectories | `path` (omit to list roots) |
+| `analyze_document` | Read the section tree without section bodies | `path`, `parentSectionNumber`, `maxDepth=3`, `maxSections=100`, `offset=0` |
+| `search_sections` | Search titles and numbers without bodies | `path`, `query`, `maxResults=20` |
+| `get_section` | Read one section body | `path`, `sectionNumber`, `maxChars=20000`, `offset=0` |
+| `export_markdown` | Export the whole document as Markdown (large) | `path` |
 
-所有 `path` 参数都支持**绝对路径**或**相对于允许根的相对路径**；有多个根时按顺序尝试。相对路径不是相对于客户端 cwd。
+Every `path` parameter accepts an **absolute** path or a path **relative to an allowed root**; multiple roots are tried in order. Relative paths are not resolved against the client cwd.
 
-### 推荐流程
+### Recommended flow
 
-1. `list_roots` / `list_directory` 找到目标 PDF。
-2. `analyze_document` 先用 `maxDepth: 2` 看整体结构。
-3. 如果返回 `hasMore: true`，用 `nextOffset` 继续翻页；翻页时用 `maxSections` 控制每页大小。
-4. 想深入某个分支时，传 `parentSectionNumber`（如 `"5.2"`）再看该分支。
-5. 找具体主题时，`search_sections` 比遍历目录省 token。
-6. `get_section` 读取命中的节；`truncated: true` 时用 `nextOffset` 继续读。
-7. 只有确实需要整本导出时才调用 `export_markdown`。
+1. Use `list_roots` / `list_directory` to find the target PDF.
+2. Call `analyze_document` with `maxDepth: 2` to see the overall structure.
+3. If `hasMore: true`, continue with `nextOffset`; use `maxSections` to control page size.
+4. To inspect a branch, pass `parentSectionNumber` (for example `"5.2"`).
+5. To find a topic, `search_sections` costs far fewer tokens than walking the outline.
+6. Use `get_section` on matching sections; when `truncated: true`, continue with `nextOffset`.
+7. Call `export_markdown` only when the full document is genuinely needed.
 
-### 分页字段
+### Pagination fields
 
-- `analyze_document`：`hasMore`、`nextOffset`、`omittedByDepth`（因 `maxDepth` 省略的节数）
-- `get_section`：`truncated`、`contentOffset`、`totalChars`、`nextOffset`
-- `search_sections`：`matchCount`、`returnedCount`、`truncated`
+- `analyze_document`: `hasMore`, `nextOffset`, `omittedByDepth` (sections omitted by `maxDepth`)
+- `get_section`: `truncated`, `contentOffset`, `totalChars`, `nextOffset`
+- `search_sections`: `matchCount`, `returnedCount`, `truncated`
 
-所有可能超限的响应都会带 `hint` 字段，直接说明下一步：
+Any response that may exceed a limit includes a `hint` naming the next step:
 
-- 目录被分页 → 用 `offset=nextOffset` 继续，或用 `parentSectionNumber` 缩小范围
-- 深层被 `maxDepth` 省略 → 增大 `maxDepth` 或传 `parentSectionNumber`
-- 正文被截断 → 用 `nextOffset` 续读
-- 搜索无结果 → 换更短的关键词或章节号前缀
-- 搜索结果被截断 → 缩小查询或增大 `maxResults`
+- Outline paged → continue with `offset=nextOffset`, or narrow with `parentSectionNumber`
+- Deeper sections omitted → raise `maxDepth` or pass `parentSectionNumber`
+- Content truncated → continue with `nextOffset`
+- No search matches → try a shorter keyword or a section number prefix
+- Search truncated → narrow the query or raise `maxResults`
 
 ## Resources
 
-- `resources/list` 列出所有允许目录下的 PDF。
-- `resources/read` 读取某个 PDF 时返回章节大纲（Markdown），不返回正文。
-- `resources/templates/list` 提供 `docs-decomposer://pdf/{path}` 模板。
+- `resources/list` lists every PDF under the allowed roots.
+- `resources/read` returns a document's section outline as Markdown, not the body.
+- `resources/templates/list` advertises `docs-decomposer://pdf/{path}`.
 
-大纲超过 100 节时，开头会有一行提示，指回 `analyze_document`（分页）和 `search_sections`（定位主题）。
+When an outline exceeds 100 sections, it starts with a line pointing back to `analyze_document` (paging) and `search_sections` (topic lookup).
 
 ## Prompts
 
-服务器提供 3 个工作流模板。客户端在 Prompts 面板（如 MCP Inspector）中可以看到并调用；调用后得到一段标准操作指令，再交给模型执行。
+The server provides three workflow templates. Clients show them in the Prompts panel (for example, MCP Inspector); each returns standard instructions for the model to follow.
 
-| Prompt | 参数 | 作用 |
+| Prompt | Arguments | Purpose |
 |---|---|---|
-| `document-overview` | `path` | 先看整体结构，再生成文档导读 |
-| `find-topic` | `path`、`topic` | 搜索主题、读取相关章节并汇总 |
-| `explain-section` | `path`、`sectionNumber` | 完整读取某一节并解释 |
+| `document-overview` | `path` | Inspect the overall structure, then produce a guided overview |
+| `find-topic` | `path`, `topic` | Search, read relevant sections, and summarize |
+| `explain-section` | `path`, `sectionNumber` | Read one section fully and explain it |
 
-示例：调用 `find-topic`，参数为 `{ "path": "NVML_API_Reference_Guide.pdf", "topic": "device queries" }`，返回的提示词会指导模型先调用 `search_sections`，再用 `get_section` 读取命中内容，最后带章节号和页码回答。
+Example: calling `find-topic` with `{ "path": "NVML_API_Reference_Guide.pdf", "topic": "device queries" }` returns instructions to call `search_sections`, read matches with `get_section`, and answer with section and page references.
 
-## 页数与 Index
+## Pages and Index
 
-- 所有工具响应都包含 `pageCount`（PDF 物理页数）。
-- 正文中的 `page` 是文档印刷页码（来自目录或书签）。
-- 目录之外的尾部无编号书签（如 `Index`）会作为独立顶层章节返回，不再并入前一节。
+- Every tool response includes `pageCount` (physical PDF pages).
+- A section's `page` is the printed page number from the contents or bookmarks.
+- Unnumbered trailing bookmarks such as `Index` become their own root sections instead of being absorbed into the previous section.

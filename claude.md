@@ -38,7 +38,7 @@ DEBUG=1 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 
 ## MCP Client Configuration
 
-Configure the client to run `npm --prefix /path/to/docs_Decomposer run mcp` and set `DOCS_DECOMPOSER_ROOTS` to the document directories the server may access. Always set it explicitly to the document directory, never to a project root, home directory, or filesystem root. Add `DEBUG=1` to the server environment to include per-depth diagnostics. If roots are unset, the server falls back to its current working directory and prints a warning to stderr. At startup it prints the allowed roots to stderr; `list_roots` returns canonical paths plus the source, and analysis responses include `root`. The filesystem root is rejected as an allowed root. See [USAGE.md](USAGE.md) for client configuration, tool flows, resources, and prompts.
+Configure the client to run `npm --prefix /path/to/docs_Decomposer run mcp` and set `DOCS_DECOMPOSER_ROOTS` to the document directories the server may access. Always set it explicitly to the document directory, never to a project root, home directory, or filesystem root. Add `DEBUG=1` to the server environment to include per-depth diagnostics. If roots are unset, the server falls back to its current working directory and prints a warning to stderr. At startup it prints the allowed roots to stderr; `list_roots` returns canonical paths plus the source, and analysis responses include `root`. The filesystem root is rejected as an allowed root. See [USAGE.md](USAGE.md) for client configuration, tool flows, resources, and prompts (Chinese: [USAGE.zh-CN.md](USAGE.zh-CN.md)). README is available in English ([README.md](README.md)) and Chinese ([README.zh-CN.md](README.zh-CN.md)).
 
 ## Development Notes
 
