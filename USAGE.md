@@ -20,15 +20,18 @@ DEBUG=1 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 
 ```json
 {
-  "path": "docs",
-  "projectPath": "/path/to/project"
+  "path": "docs"
 }
 ```
 
-- `path` 可以是相对 `projectPath` 的路径
+- 项目路径在服务器启动时确定：`DOCS_DECOMPOSER_PROJECT`，未设置时用服务器工作目录。**客户端不能通过参数改变作用域**
+- `path` 可以是相对项目目录的路径，也可以是绝对路径
 - 文档目录必须在项目目录内；越界和文件系统根会被拒绝
 - 服务器把「项目 → 文档目录」映射写入 `~/.config/docs-decomposer/roots.json`，可用 `DOCS_DECOMPOSER_CONFIG` 覆盖位置
+- 加载记录时会重新校验路径仍在项目目录内
 - 当前会话立即生效；下次启动时按项目路径自动加载
+
+项目路径由 `DOCS_DECOMPOSER_PROJECT` 指定，未设置时使用服务器工作目录。
 
 启动时的根解析顺序：
 

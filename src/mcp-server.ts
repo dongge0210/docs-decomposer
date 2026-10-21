@@ -117,12 +117,18 @@ async function writeStoredRoots(stored: StoredRoots): Promise<void> {
   await rename(temporary, target);
 }
 
+async function resolveProjectPath(): Promise<string> {
+  const configured = process.env.DOCS_DECOMPOSER_PROJECT?.trim();
+  const candidate = configured ? resolve(configured) : resolve(process.cwd());
+  return realpath(candidate).catch(() => candidate);
+}
+
 export async function resolveStartupRoots(
   projectPathOverride?: string,
 ): Promise<StartupRoots> {
   const projectPath = projectPathOverride
     ? await realpath(resolve(projectPathOverride))
-    : await realpath(process.cwd()).catch(() => resolve(process.cwd()));
+    : await resolveProjectPath();
 
   const config = getRootConfigFromEnvironment();
   if (config.source === "environment") {
@@ -130,7 +136,8 @@ export async function resolveStartupRoots(
   }
 
   const stored = await readStoredRoots();
-  const remembered = stored.projects[projectPath]?.roots;
+  const remembered = stored.projects[projectPath]?.roots
+    ?.filter((root) => isWithinRoot(projectPath, root));
   if (remembered && remembered.length > 0) {
     return { roots: remembered, source: "registered", projectPath };
   }
@@ -425,7 +432,7 @@ export async function createMcpServer(
     : {
         roots: allowedRootPaths,
         source: rootSource ?? "explicit",
-        projectPath: await realpath(process.cwd()).catch(() => resolve(process.cwd())),
+        projectPath: await resolveProjectPath(),
       };
   const resolvedRootSource = startup.source;
   const projectPath = startup.projectPath;
@@ -556,15 +563,14 @@ export async function createMcpServer(
   server.registerTool(
     "register_root",
     {
-      description: "Remember a document directory for a project so later sessions use it automatically. The directory must be inside the project directory. Call list_roots first to see the current project path and roots.",
+      description: "Remember a document directory for the current project so later sessions use it automatically. The project is the server working directory or DOCS_DECOMPOSER_PROJECT; the document directory must be inside it. Call list_roots first to see the project path and roots.",
       inputSchema: {
-        path: z.string().min(1).describe("Document directory, absolute or relative to projectPath."),
-        projectPath: z.string().min(1).optional().describe("Project directory. Defaults to the server working directory."),
+        path: z.string().min(1).describe("Document directory, absolute or relative to the project directory."),
       },
     },
-    async ({ path: inputPath, projectPath: inputProjectPath }) => {
+    async ({ path: inputPath }) => {
       try {
-        const canonicalProject = await realpath(resolve(inputProjectPath ?? projectPath));
+        const canonicalProject = projectPath;
         if (!(await stat(canonicalProject)).isDirectory()) {
           throw new Error("The project path must be a directory.");
         }

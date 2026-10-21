@@ -319,7 +319,9 @@ test("registers a document root for a project and remembers it", async () => {
 
   const previousConfig = process.env.DOCS_DECOMPOSER_CONFIG;
   const previousRoots = process.env.DOCS_DECOMPOSER_ROOTS;
+  const previousProject = process.env.DOCS_DECOMPOSER_PROJECT;
   process.env.DOCS_DECOMPOSER_CONFIG = configPath;
+  process.env.DOCS_DECOMPOSER_PROJECT = project;
   delete process.env.DOCS_DECOMPOSER_ROOTS;
 
   const server = await createMcpServer([project], async () => sampleDocument);
@@ -330,7 +332,7 @@ test("registers a document root for a project and remembers it", async () => {
 
     const registered = readStructuredResult(await client.callTool({
       name: "register_root",
-      arguments: { path: "documents", projectPath: project },
+      arguments: { path: "documents" },
     }));
     assert.equal(registered.projectPath, canonicalProject);
     assert.deepEqual(registered.roots, [canonicalDocuments]);
@@ -346,9 +348,16 @@ test("registers a document root for a project and remembers it", async () => {
 
     const rejected = await client.callTool({
       name: "register_root",
-      arguments: { path: join(project, ".."), projectPath: project },
+      arguments: { path: join(project, "..") },
     });
     assert.equal(rejected.isError, true);
+
+    // A client-supplied projectPath must not widen the containment check.
+    const scopedBypass = await client.callTool({
+      name: "register_root",
+      arguments: { path: join(project, ".."), projectPath: join(project, "..") },
+    });
+    assert.equal(scopedBypass.isError, true);
   } finally {
     await client.close();
     await server.close();
@@ -362,6 +371,11 @@ test("registers a document root for a project and remembers it", async () => {
       delete process.env.DOCS_DECOMPOSER_ROOTS;
     } else {
       process.env.DOCS_DECOMPOSER_ROOTS = previousRoots;
+    }
+    if (previousProject === undefined) {
+      delete process.env.DOCS_DECOMPOSER_PROJECT;
+    } else {
+      process.env.DOCS_DECOMPOSER_PROJECT = previousProject;
     }
   }
 });

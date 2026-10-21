@@ -1,6 +1,6 @@
 # Session State
 
-Updated: 2026-10-21 19:50 CST
+Updated: 2026-10-21 19:52 CST
 
 ## Current Stage
 
@@ -10,7 +10,7 @@ The TypeScript PDF processing core and stdio MCP server are implemented. The ser
 
 - `npm test`: 11 tests pass, including MCP protocol, pagination, search, content truncation, long-outline hints, prompts, root registration, root safety, and path-boundary coverage. MCP text assertions now compare against `structuredContent` instead of the old `key=value` text format.
 - MCP token budget on the NVML sample: `analyze_document` L3 is ~915 tokens (was ~1,670); L4 is paged at 100 sections, ~1,740 tokens per page (was ~9,300 for all 276); `search_sections` is ~250 tokens; `get_section` is capped at 20,000 characters (~5,200 tokens) instead of up to 223,008 characters.
-- `register_root` lets an agent record a project-to-documents mapping without environment variables. It writes `~/.config/docs-decomposer/roots.json` (override: `DOCS_DECOMPOSER_CONFIG`), requires the document directory to be inside the project directory, applies immediately, and is auto-loaded on later startups. Startup precedence: env > registered > cwd. Verified end-to-end: register then `resolveStartupRoots` returns `source: "registered"`.
+- `register_root` lets an agent record a project-to-documents mapping without environment variables. It writes `~/.config/docs-decomposer/roots.json` (override: `DOCS_DECOMPOSER_CONFIG`). The project path is fixed at startup from `DOCS_DECOMPOSER_PROJECT` or the working directory — it is not a client parameter, so callers cannot widen the containment scope. Registered roots are re-checked against the project path when loaded. Startup precedence: env > registered > cwd. Verified end-to-end: register then `resolveStartupRoots` returns `source: "registered"`.
 - Root safety: startup logs allowed roots to stderr and warns when falling back to cwd; `list_roots` returns canonical paths plus `source`; `analyze_document`/`get_section`/`search_sections`/`export_markdown` include `root`; the filesystem root is rejected. 10 tests pass.
 - Truncated responses now carry a `hint` naming the next call: paging (`offset=nextOffset`), depth (`maxDepth`/`parentSectionNumber`), content continuation, or search refinement. Resource outlines over 100 sections start with the same guidance. 9 tests pass.
 - `prompts` exposes `document-overview`, `find-topic`, and `explain-section`; each returns a tool-usage instruction with `path`/`topic`/`sectionNumber` arguments. `USAGE.md` documents startup, client configuration, tool flows, resources, and prompts.
