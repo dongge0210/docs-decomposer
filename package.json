@@ -7,14 +7,17 @@
     "build": "tsc --noEmit",
     "mcp": "tsx src/mcp-server.ts",
     "test": "tsx --test tests/*.test.ts",
-    "process": "tsx src/cli.ts"
+    "process": "tsx src/cli.ts",
+    "tui": "tsx src/tui.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
+    "blessed": "^0.1.81",
     "pdfjs-dist": "^6.2.108",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@types/blessed": "^0.1.27",
     "@types/node": "^24.10.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"

@@ -46,6 +46,12 @@ function isPdfTextItem(item: unknown): item is PdfTextItem {
   return typeof candidate.str === "string" && Array.isArray(candidate.transform);
 }
 
+function sanitizePdfText(value: string): string {
+  return value
+    .replace(/[\u0000-\u001F\u007F\u200B-\u200D\u2060\uFEFF]/g, "")
+    .replace(/[\u00A0\u1680\u180E\u2007\u202F]/g, " ");
+}
+
 function groupPageText(items: unknown[]): string[] {
   const positioned = items
     .filter(isPdfTextItem)
@@ -75,16 +81,16 @@ function groupPageText(items: unknown[]): string[] {
         if (previous && item.x - (previous.x + previous.width) > 1.5) {
           line += " ";
         }
-        line += item.str;
+        line += sanitizePdfText(item.str);
         previous = item;
       }
-      return line.trim();
+      return sanitizePdfText(line).trim();
     })
     .filter(Boolean);
 }
 
 function normalizeHeading(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return sanitizePdfText(value).toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
 export function parseContentsEntries(pageLines: string[][]): ContentsEntry[] {
@@ -93,7 +99,10 @@ export function parseContentsEntries(pageLines: string[][]): ContentsEntry[] {
   let pending: { number: string; title: string } | undefined;
 
   const appendEntry = (number: string, rawTitle: string, page: number): void => {
-    const title = rawTitle.replace(/(?:\s*\.\s*){2,}\s*$/, "").trim();
+    const title = sanitizePdfText(rawTitle)
+      .replace(/(?:\s*\.\s*){2,}\s*$/, "")
+      .replace(/\s+/g, " ")
+      .trim();
     if (title) {
       entries.push({ number, title, page });
     }
@@ -101,7 +110,7 @@ export function parseContentsEntries(pageLines: string[][]): ContentsEntry[] {
 
   for (const lines of pageLines) {
     for (const rawLine of lines) {
-      const line = rawLine.trim();
+      const line = sanitizePdfText(rawLine).trim();
       if (!inContents) {
         if (/^(?:table of )?contents$/i.test(line)) {
           inContents = true;
@@ -363,6 +372,7 @@ function buildSectionsFromOutline(
       const content = allLines.slice(item.position + 1, firstChild).join("\n").trim();
       const children = buildItems(item.children, nextSibling);
       const title = item.source.title.trim();
+      const href = item.source.dest ? `#page-${item.page}` : undefined;
       return {
         id: (item.number ? `${item.number}-${title}` : title)
           .toLowerCase()
@@ -376,6 +386,7 @@ function buildSectionsFromOutline(
         page: item.displayPage ?? item.page,
         content,
         children,
+        ...(href ? { link: { href } } : {}),
       };
     });
 

@@ -1,3 +1,8 @@
+export interface SectionLink {
+  href: string;
+  label?: string;
+}
+
 export interface Section {
   id: string;
   title: string;
@@ -6,6 +11,7 @@ export interface Section {
   page?: number;
   content: string;
   children: Section[];
+  link?: SectionLink;
 }
 
 export interface ParsedDocument {
@@ -158,7 +164,8 @@ export function renderMarkdown(document: ParsedDocument): string {
     for (const section of sections) {
       const depth = Math.min(section.level, 6);
       const title = section.number ? `${section.number} ${section.title}` : section.title;
-      output.push(`${"#".repeat(depth)} ${title}`);
+      const displayTitle = section.link?.href ? `[${title}](${section.link.href})` : title;
+      output.push(`${"#".repeat(depth)} ${displayTitle}`);
       if (section.page) {
         output.push(`<!-- source page: ${section.page} -->`);
       }

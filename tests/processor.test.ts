@@ -33,6 +33,26 @@ test("accepts Markdown headings and preserves text before the first heading", ()
   assert.equal(document.sections[0]?.content, "Body");
 });
 
+test("renders linked section titles as explicit markdown links", () => {
+  const document = {
+    preamble: "",
+    sections: [{
+      id: "introduction",
+      title: "Introduction",
+      level: 1,
+      page: 3,
+      content: "Body",
+      children: [],
+      link: { href: "#page-3", label: "Introduction" },
+    }],
+  };
+
+  assert.equal(
+    renderMarkdown(document),
+    "# [Introduction](#page-3)\n\n<!-- source page: 3 -->\n\nBody\n",
+  );
+});
+
 test("skips table-of-contents entries and starts at the chapter heading", () => {
   const document = parseSections(
     "Contents\n1 First chapter 3\n1.1 Subsection . . . 4\n\nChapter 1. First chapter\nBody",
@@ -59,5 +79,23 @@ test("parses numbered contents entries and strips dot leaders", () => {
     { number: "1", title: "NVML API Reference", page: 3 },
     { number: "1.1", title: "API Documentation", page: 3 },
     { number: "2", title: "Known Issues", page: 5 },
+  ]);
+});
+
+test("ignores hidden link markers in PDF contents titles", () => {
+  const entries = parseContentsEntries([
+    [
+      "Contents",
+      "1 Intro\u200Bduction 3",
+      "1.1 API\u200B Documentation . . . . . . . 4",
+      "2 Troubleshooting\u00A0Guide 8",
+      "Chapter 1. Introduction",
+    ],
+  ]);
+
+  assert.deepEqual(entries, [
+    { number: "1", title: "Introduction", page: 3 },
+    { number: "1.1", title: "API Documentation", page: 4 },
+    { number: "2", title: "Troubleshooting Guide", page: 8 },
   ]);
 });
