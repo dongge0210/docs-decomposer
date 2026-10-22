@@ -2,20 +2,21 @@
 
 ## Project
 
-TypeScript-based document processor. The current MVP extracts PDF text, uses the table of contents to build a nested section tree, and writes the complete Markdown result to stdout.
+TypeScript-based PDF document processor with a CLI, terminal browser, and stdio MCP server. It extracts PDF text, builds a nested section tree from the table of contents and bookmarks, and can write the complete Markdown result to stdout.
 
-The current scope is the processing core, CLI, and stdio MCP server. There is no browser UI, desktop folder navigator, or HTML exporter yet.
+There is no browser UI, desktop folder navigator, or HTML exporter. The TUI is a terminal-based browser rooted at `docs/`.
 
 ## Implementation
 
 - `src/pdf.ts` extracts page text with PDF.js. It parses numbered contents entries and printed page numbers, uses PDF bookmarks to locate matching body headings, and falls back to bookmarks or text heading detection when needed. Unnumbered top-level bookmarks after the last contents entry (for example `Index`) become their own root sections instead of being absorbed into the preceding section body.
 - `src/processor.ts` builds the section tree and renders Markdown.
 - `src/cli.ts` accepts a PDF path and writes the full Markdown document to stdout.
-- `src/mcp-server.ts` exposes authorized PDF directories, shallow section trees, individual sections, and full Markdown through MCP tools. `resources/list` also exposes every PDF under the allowed roots (`docs-decomposer://pdf/<encoded absolute path>`); `resources/read` returns that document's section outline as Markdown, not the full body. `prompts/list` returns an empty list. The resource handlers also prevent clients from seeing `-32601` when they probe these methods.
+- `src/tui.ts` browses `docs/`, opens PDFs, and displays section previews in 24-extracted-line pages. Enter opens the selected directory/PDF, Esc returns to the previous view or parent directory, and PageUp/PageDown or preview-wheel events change body pages.
+- `src/mcp-server.ts` exposes authorized PDF directories, shallow section trees, individual sections, and full Markdown through MCP tools. `resources/list` also exposes every PDF under the allowed roots (`docs-decomposer://pdf/<encoded absolute path>`); `resources/read` returns that document's section outline as Markdown, not the full body. The resource handlers also prevent clients from seeing `-32601` when they probe these methods.
   - `analyze_document` defaults to depth 3 and at most 100 sections; use `parentSectionNumber` to scope a branch and `offset`/`maxSections` to page through long outlines. Responses report `hasMore` and `nextOffset`.
   - `search_sections` matches section titles and numbers without returning bodies, so agents can locate a section before reading it.
-  - `get_section` caps content at 20,000 characters; use `maxChars`/`offset` to page, with `truncated` and `nextOffset` in the response.
-  - When output is truncated by depth, section-count limits, search limits, or `maxChars`, the response includes a `hint` that names the next call to make. Resource outlines over 100 sections start with the same guidance.
+  - `get_section` returns at most 20,000 characters by default (maximum request: 200,000); use `maxChars` and the returned `nextOffset` as the next `offset` until `truncated` is false. Offsets are character positions, not printed PDF page numbers.
+  - When output is truncated by depth, section-count limits, search limits, or `maxChars`, the response includes a `hint` that names the next call to make and reports cumulative content progress. Resource outlines over 100 sections start with the same guidance.
   - `ParsedDocument.pageCount` comes from `pdf.numPages`; tool responses include `pageCount`, and resource outlines start with a `# Title (N pages)` header.
   - `register_root` remembers a project-to-document-directory mapping in `~/.config/docs-decomposer/roots.json` (override with `DOCS_DECOMPOSER_CONFIG`). The project path is fixed at startup from `DOCS_DECOMPOSER_PROJECT` or the working directory; the client cannot choose it. The document directory must be inside that project path. Registered roots apply immediately and are loaded on later startups by project path, re-checking containment.
   - Startup root precedence: `DOCS_DECOMPOSER_ROOTS`, then the registered mapping for the project, then the current working directory. `list_roots` reports `source` (`environment`, `registered`, `current-directory`, `explicit`), `projectPath`, and `configPath`.
@@ -23,6 +24,7 @@ The current scope is the processing core, CLI, and stdio MCP server. There is no
   - Set `DEBUG=1` in the server environment to include per-depth counts.
 - `tests/processor.test.ts` covers section nesting, Markdown rendering, and contents parsing.
 - `tests/mcp.test.ts` covers MCP tool calls and allowed-root path boundaries.
+- `tests/tui.test.ts` covers section flattening, directory listing, and long-body preview pagination.
 - `docs/` is intentionally Git-ignored and may contain local sample documents.
 
 ## Commands
@@ -32,6 +34,7 @@ npm install
 npm test
 npm run build
 npm run process -- docs/<file>.pdf
+npm run tui
 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 DEBUG=1 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 ```

@@ -6,6 +6,7 @@
 
 - 使用 PDF.js 提取文本，并根据目录与书签构建嵌套章节树。
 - 通过 MCP 工具提供分页目录、章节搜索和限量正文读取，AI 不需要一次吞下整本 PDF。
+- 提供终端文档浏览器，可打开 `docs/` 下的 PDF，并分页查看较长章节正文。
 - 支持绝对路径或相对于允许根的路径、项目根目录登记，以及可选的 resources 和 prompts。
 
 ## 快速开始
@@ -15,6 +16,7 @@ npm install
 npm test
 npm run build
 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
+npm run tui
 ```
 
 ## MCP 客户端配置
@@ -62,6 +64,7 @@ DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 |---|---|
 | `npm run process -- docs/<file>.pdf` | 将完整 Markdown 提取结果输出到 stdout |
 | `npm run mcp` | 启动 stdio MCP 服务器 |
+| `npm run tui` | 浏览 `docs/`、打开 PDF 并分页查看章节正文 |
 | `npm test` | 运行测试 |
 | `npm run build` | 类型检查 |
 

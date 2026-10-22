@@ -16,6 +16,12 @@ DEBUG=1 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 
 `DOCS_DECOMPOSER_ROOTS` separates multiple directories with `:`. When unset, only the server's startup directory is allowed.
 
+## Terminal browser
+
+Run `npm run tui` from the project directory to browse the local `docs/` directory and open a PDF. Press Enter to open the selected directory or PDF; press Esc to return to the document list or parent directory. In the section view, PageUp/PageDown or the mouse wheel moves through the preview.
+
+Long section previews are displayed in pages of 24 extracted text lines. These are reading pages, not printed PDF pages; a single section may span many printed pages before the next heading.
+
 ## Remembering a document directory (no environment variables)
 
 If a client cannot reliably pass environment variables, let the AI call `register_root`:
@@ -112,22 +118,24 @@ Every `path` parameter accepts an **absolute** path or a path **relative to an a
 3. If `hasMore: true`, continue with `nextOffset`; use `maxSections` to control page size.
 4. To inspect a branch, pass `parentSectionNumber` (for example `"5.2"`).
 5. To find a topic, `search_sections` costs far fewer tokens than walking the outline.
-6. Use `get_section` on matching sections; when `truncated: true`, continue with `nextOffset`.
+6. Use `get_section` on matching sections. It returns up to 20,000 characters by default (up to 200,000 per call); when `truncated: true`, pass the returned `nextOffset` as `offset` in the next call and continue until `truncated: false`.
 7. Call `export_markdown` only when the full document is genuinely needed.
 
 ### Pagination fields
 
 - `analyze_document`: `hasMore`, `nextOffset`, `omittedByDepth` (sections omitted by `maxDepth`)
-- `get_section`: `truncated`, `contentOffset`, `totalChars`, `nextOffset`
+- `get_section`: `truncated`, `contentOffset`, `totalChars`, `nextOffset`; offsets count characters in the extracted section body, not PDF page numbers.
 - `search_sections`: `matchCount`, `returnedCount`, `truncated`
 
 Any response that may exceed a limit includes a `hint` naming the next step:
 
 - Outline paged → continue with `offset=nextOffset`, or narrow with `parentSectionNumber`
 - Deeper sections omitted → raise `maxDepth` or pass `parentSectionNumber`
-- Content truncated → continue with `nextOffset`
+- Content truncated → continue with `offset=nextOffset` until `truncated` is false; each response reports cumulative progress in characters
 - No search matches → try a shorter keyword or a section number prefix
 - Search truncated → narrow the query or raise `maxResults`
+
+`get_section` returns 20,000 characters by default and accepts up to 200,000 characters per call. For a long section, keep calling it with the response's `nextOffset` as the next `offset` until `truncated` is `false`. Offsets refer to characters in the extracted body, not printed PDF pages; for example, content under `5.2.1.7` can continue from printed page 92 up to the next heading on page 209 and must be read across multiple calls.
 
 ## Resources
 

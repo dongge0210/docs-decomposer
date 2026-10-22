@@ -16,6 +16,12 @@ DEBUG=1 DOCS_DECOMPOSER_ROOTS="$PWD/docs" npm run mcp
 
 `DOCS_DECOMPOSER_ROOTS` 用 `:` 分隔多个目录。未设置时只允许访问服务器启动目录。
 
+## 终端浏览器
+
+在项目目录运行 `npm run tui`，浏览本地 `docs/` 并打开 PDF。按 Enter 打开选中的目录或 PDF；按 Esc 返回文档列表或上级目录。在章节视图中，使用 PageUp/PageDown 或鼠标滚轮翻阅正文。
+
+较长章节会按每页 24 行提取文本显示。这是阅读分页，不是 PDF 印刷页；一个章节可能跨越许多印刷页，直到下一个标题。
+
 ## 记住文档目录（无需环境变量）
 
 如果客户端无法可靠传递 environment，可以让 AI 直接调用 `register_root`：
@@ -128,6 +134,8 @@ MCP Inspector 中用同样的命令连接，选择 stdio 传输即可。
 - 正文被截断 → 用 `nextOffset` 续读
 - 搜索无结果 → 换更短的关键词或章节号前缀
 - 搜索结果被截断 → 缩小查询或增大 `maxResults`
+
+`get_section` 默认每次返回 20,000 个字符，单次请求最多 200,000 个字符。超长章节应重复调用：把响应中的 `nextOffset` 作为下一次请求的 `offset`，直到 `truncated` 为 `false`。offset 表示抽取正文中的字符位置，不是 PDF 页码；例如 `5.2.1.7` 从第 92 页延续到第 209 页时，正文仍属于同一节，需按字符偏移完整续读。
 
 ## Resources
 
