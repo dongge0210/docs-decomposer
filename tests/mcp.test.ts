@@ -279,6 +279,59 @@ test("registers document browsing and section tools over MCP", async () => {
 
 });
 
+test("pages through very long section content over MCP without losing text", async () => {
+  const root = await mkdtemp(join(tmpdir(), "docs-decomposer-mcp-long-section-"));
+  await mkdir(join(root, "manuals"));
+  await writeFile(join(root, "manuals", "guide.pdf"), "%PDF-1.7");
+
+  const overview = sampleDocument.sections[0];
+  assert.ok(overview);
+  const details = overview.children[0];
+  assert.ok(details);
+
+  const longContent = Array.from({ length: 45_321 }, (_, index) =>
+    String.fromCharCode(65 + (index % 26))).join("");
+  const longDocument: ParsedDocument = {
+    ...sampleDocument,
+    sections: [{
+      ...overview,
+      children: [{ ...details, content: longContent }],
+    }],
+  };
+  const server = await createMcpServer([root], async () => longDocument, false);
+  const client = await connectMcpClient(server);
+
+  try {
+    const chunks: string[] = [];
+    let offset = 0;
+    while (true) {
+      const result = readStructuredResult(await client.callTool({
+        name: "get_section",
+        arguments: { path: "manuals/guide.pdf", sectionNumber: "1.1", maxChars: 20_000, offset },
+      }));
+      const content = String(result.content);
+      chunks.push(content);
+      assert.equal(result.contentOffset, offset);
+      assert.equal(result.totalChars, longContent.length);
+
+      if (!result.truncated) {
+        break;
+      }
+
+      const nextOffset = Number(result.nextOffset);
+      assert.equal(nextOffset, offset + content.length);
+      assert.match(String(result.hint), new RegExp(`${nextOffset} of ${longContent.length}`));
+      offset = nextOffset;
+    }
+
+    assert.equal(chunks.join(""), longContent);
+  } finally {
+    await client.close();
+    await server.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("adds depth diagnostics when the MCP server starts with DEBUG=1", async () => {
   const root = await mkdtemp(join(tmpdir(), "docs-decomposer-debug-"));
   await writeFile(join(root, "guide.pdf"), "%PDF-1.7");

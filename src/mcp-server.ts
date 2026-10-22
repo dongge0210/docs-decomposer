@@ -765,7 +765,7 @@ export async function createMcpServer(
           ...(hasMoreContent
             ? {
                 nextOffset: contentOffset + content.length,
-                hint: `Section content truncated at ${content.length} of ${section.content.length} characters. Continue with offset=${contentOffset + content.length}.`,
+                hint: `Section content truncated at ${contentOffset + content.length} of ${section.content.length} characters. Continue with offset=${contentOffset + content.length}.`,
               }
             : {}),
           childSections: section.children.map((child) => ({
